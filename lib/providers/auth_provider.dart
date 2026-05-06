@@ -29,8 +29,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> _checkInitialAuth() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
-    // In a real app, we might want to fetch user data here if we have a token
-    // For now, if there's a token, we could assume we are logged in or wait for a fetch
   }
 
   Future<bool> register(String name, String email, String password) async {
