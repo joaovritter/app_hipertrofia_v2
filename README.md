@@ -40,6 +40,19 @@ No código, verifique se `api_service.dart` lê `String.fromEnvironment('API_BAS
 
 O fluxo de autenticação é via API (provavelmente retornando um token). Após o login, o token é usado nas requisições subsequentes — verifique `auth_provider.dart` e `api_service.dart` para como o token é armazenado e anexado aos cabeçalhos.
 
+---
+
+<img width="514" height="957" alt="HomePage (1)" src="https://github.com/user-attachments/assets/a5ddac2a-2114-4880-8d09-74fc2b0cc946" />
+
+---
+
+<img width="600" height="1023" alt="FeedbackIA (1)" src="https://github.com/user-attachments/assets/13ad0ced-a2a3-4b3d-a8e0-1d0e10608f6b" />
+
+---
+
+
+
+
 ## Instalação e execução (desenvolvimento)
 
 Pré-requisitos:
