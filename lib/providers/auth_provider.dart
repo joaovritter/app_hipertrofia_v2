@@ -8,13 +8,19 @@ class AuthState {
   final bool isLoading;
   final String? error;
 
-  AuthState({this.user, this.isLoading = false, this.error});
+  // Adicionado por Fares Mahmud
+  // Flag que indica se o app ainda está verificando o token salvo.
+  // Evita jogar o usuário pra tela de login antes de checar se ele já estava logado.
+  final bool isCheckingAuth;
 
-  AuthState copyWith({User? user, bool? isLoading, String? error}) {
+  AuthState({this.user, this.isLoading = false, this.error, this.isCheckingAuth = true});
+
+  AuthState copyWith({User? user, bool? isLoading, String? error, bool? isCheckingAuth}) {
     return AuthState(
       user: user ?? this.user,
       isLoading: isLoading ?? this.isLoading,
       error: error,
+      isCheckingAuth: isCheckingAuth ?? this.isCheckingAuth,
     );
   }
 }
@@ -26,22 +32,32 @@ class AuthNotifier extends StateNotifier<AuthState> {
     _checkInitialAuth();
   }
 
+  // Adicionado por Fares Mahmud
+  // Verifica se existe um token salvo ao abrir o app.
+  // Se existir, marca o usuário como autenticado sem precisar logar de novo.
+  // Ao terminar, desativa o isCheckingAuth pra o app decidir qual tela mostrar.
   Future<void> _checkInitialAuth() async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('jwt_token');
+    if (token != null) {
+      state = state.copyWith(
+        user: User(id: 0, name: '', email: ''),
+        isCheckingAuth: false,
+      );
+    } else {
+      state = state.copyWith(isCheckingAuth: false);
+    }
   }
 
   Future<bool> register(String name, String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
       await _apiService.register(name, email, password);
-      // Auto login after register
       return await login(email, password);
     } catch (e) {
-      print('ERRO NO REGISTRO: $e');
       state = state.copyWith(
         isLoading: false,
-        error: 'Erro ao criar conta. E-mail já pode estar em uso.',
+        error: e is ApiException ? e.message : 'Erro ao criar conta. E-mail já pode estar em uso.',
       );
       return false;
     }
@@ -55,14 +71,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       state = state.copyWith(user: user, isLoading: false);
       return true;
     } catch (e) {
-      print('ERRO NO LOGIN: $e');
-      String errorMessage = 'Login falhou. Verifique suas credenciais.';
-      if (e.toString().contains('SocketException') ||
-          e.toString().contains('connection timeout')) {
-        errorMessage =
-            'Erro de conexão: Verifique se o servidor está rodando e se o IP 10.0.2.2 está correto.';
-      }
-      state = state.copyWith(isLoading: false, error: errorMessage);
+      // Adicionado por Fares Mahmud
+      // Agora usa ApiException diretamente, sem precisar checar strings de erro.
+      state = state.copyWith(
+        isLoading: false,
+        error: e is ApiException ? e.message : 'Login falhou. Verifique suas credenciais.',
+      );
       return false;
     }
   }

@@ -22,7 +22,7 @@ class HyperTrackApp extends ConsumerWidget {
       theme: ThemeData(
         useMaterial3: true,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF00E676), // Vibrant Lime
+          seedColor: const Color(0xFF00E676),
           brightness: Brightness.dark,
           surface: const Color(0xFF121212),
           primary: const Color(0xFF00E676),
@@ -42,7 +42,22 @@ class HyperTrackApp extends ConsumerWidget {
           elevation: 4,
         ),
       ),
-      home: authState.user == null ? const LoginScreen() : const HomeScreen(),
+
+      // Adicionado por Fares Mahmud
+      // Enquanto o app verifica o token salvo, mostra uma tela de loading
+      // com a cor principal do app. Evita o usuário ver a tela de login
+      // por um segundo mesmo já estando autenticado.
+      home: authState.isCheckingAuth
+          ? const Scaffold(
+              body: Center(
+                child: CircularProgressIndicator(
+                  color: Color(0xFF00E676),
+                ),
+              ),
+            )
+          : authState.user == null
+              ? const LoginScreen()
+              : const HomeScreen(),
     );
   }
 }

@@ -7,6 +7,21 @@ import '../models/workout_set.dart';
 import '../models/onboarding_models.dart';
 import '../models/exercise.dart';
 import '../models/workout_history.dart';
+
+// Adicionado por Fares Mahmud
+// Classe de exceção personalizada para erros da API.
+// Em vez de lançar erros técnicos do Dio direto pro app,
+// criamos um erro próprio com mensagem legível e o status HTTP.
+class ApiException implements Exception {
+  final String message;
+  final int? statusCode;
+
+  ApiException(this.message, {this.statusCode});
+
+  @override
+  String toString() => message;
+}
+
 class ApiService {
   final Dio _dio = Dio(BaseOptions(
     baseUrl: 'http://localhost:3001/api',
@@ -27,6 +42,43 @@ class ApiService {
     ));
   }
 
+  // Adicionado por Fares Mahmud
+  // Método centralizado de tratamento de erros.
+  // Todo erro de rede ou HTTP passa por aqui e vira uma ApiException
+  // com mensagem em português adequada ao tipo de problema.
+  ApiException _handleError(dynamic e) {
+    if (e is DioException) {
+      switch (e.type) {
+        case DioExceptionType.connectionTimeout:
+        case DioExceptionType.sendTimeout:
+        case DioExceptionType.receiveTimeout:
+          return ApiException('Tempo de conexão esgotado. Verifique sua internet.');
+        case DioExceptionType.connectionError:
+          return ApiException('Sem conexão com o servidor. Verifique sua internet.');
+        case DioExceptionType.badResponse:
+          final status = e.response?.statusCode;
+          final serverMessage = e.response?.data?['message'];
+          switch (status) {
+            case 400:
+              return ApiException(serverMessage ?? 'Dados inválidos.', statusCode: status);
+            case 401:
+              return ApiException('Sessão expirada. Faça login novamente.', statusCode: status);
+            case 403:
+              return ApiException('Acesso negado.', statusCode: status);
+            case 404:
+              return ApiException('Recurso não encontrado.', statusCode: status);
+            case 500:
+              return ApiException('Erro interno do servidor. Tente novamente.', statusCode: status);
+            default:
+              return ApiException(serverMessage ?? 'Erro desconhecido ($status).', statusCode: status);
+          }
+        default:
+          return ApiException('Erro de conexão inesperado.');
+      }
+    }
+    return ApiException('Erro inesperado. Tente novamente.');
+  }
+
   // Auth
   Future<Map<String, dynamic>> register(String name, String email, String password) async {
     try {
@@ -37,7 +89,7 @@ class ApiService {
       });
       return response.data;
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -47,16 +99,16 @@ class ApiService {
         'email': email,
         'password': password,
       });
-
       if (response.statusCode == 200) {
         final token = response.data['token'];
         final prefs = await SharedPreferences.getInstance();
         await prefs.setString('jwt_token', token);
         return response.data;
       }
-      throw Exception('Login failed');
+      throw ApiException('Falha no login.');
     } catch (e) {
-      rethrow;
+      if (e is ApiException) rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -71,7 +123,7 @@ class ApiService {
       final response = await _dio.get('/training/muscle-groups');
       return (response.data as List).map((e) => MuscleGroup.fromJson(e)).toList();
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -80,7 +132,7 @@ class ApiService {
       final response = await _dio.get('/training/exercises');
       return (response.data as List).map((e) => Exercise.fromJson(e)).toList();
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -90,7 +142,7 @@ class ApiService {
         'divisions': divisions.where((d) => !d.isRest).map((d) => d.toJson()).toList(),
       });
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -100,7 +152,7 @@ class ApiService {
       final response = await _dio.get('/training/session', queryParameters: {'offset': offset});
       return WorkoutSession.fromJson(response.data);
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -114,7 +166,7 @@ class ApiService {
       });
       return response.data;
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -123,7 +175,7 @@ class ApiService {
       final response = await _dio.get('/workouts/session/$id');
       return WorkoutHistoryDetail.fromJson(response.data);
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
@@ -135,7 +187,7 @@ class ApiService {
       });
       return response.data;
     } catch (e) {
-      rethrow;
+      throw _handleError(e); // Adicionado por Fares Mahmud
     }
   }
 
