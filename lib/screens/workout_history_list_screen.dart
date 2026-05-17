@@ -40,89 +40,128 @@ class _WorkoutHistoryListScreenState extends ConsumerState<WorkoutHistoryListScr
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.black,
       appBar: AppBar(
-        title: const Text('Histórico', style: TextStyle(fontWeight: FontWeight.bold)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new, size: 18),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: const Text(
+          'Histórico',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         centerTitle: false,
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.home_outlined),
-            onPressed: () {
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.history_outlined, color: Colors.blue), // Highlight active tab
-            onPressed: () {},
-          ),
-          IconButton(
-            icon: const Icon(Icons.logout_outlined),
-            onPressed: () {
-              // Logout logic usually involves AuthProvider
-              // Since this is a simple screen, we can just pop to home and let it handle logout
-              Navigator.of(context).popUntil((route) => route.isFirst);
-            },
-          ),
-        ],
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: Colors.white)))
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(Icons.wifi_off_outlined, color: Colors.redAccent, size: 48),
+                      const SizedBox(height: 16),
+                      Text(_error!, style: const TextStyle(color: Colors.redAccent)),
+                      const SizedBox(height: 16),
+                      OutlinedButton(
+                        onPressed: () {
+                          setState(() => _isLoading = true);
+                          _fetchHistory();
+                        },
+                        child: const Text('Tentar novamente'),
+                      ),
+                    ],
+                  ),
+                )
               : _history.isEmpty
                   ? Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.history, size: 64, color: Colors.grey[800]),
+                          Icon(Icons.fitness_center_outlined, size: 64, color: Colors.grey[700]),
                           const SizedBox(height: 16),
-                          Text('Nenhum treino registrado ainda.', style: TextStyle(color: Colors.grey[600])),
+                          Text(
+                            'Nenhum treino registrado ainda.',
+                            style: TextStyle(color: Colors.grey[500], fontSize: 15),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Complete seu primeiro treino para ver o histórico.',
+                            style: TextStyle(color: Colors.grey[700], fontSize: 13),
+                            textAlign: TextAlign.center,
+                          ),
                         ],
                       ),
                     )
-                  : ListView.builder(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: _history.length,
-                      itemBuilder: (context, index) {
-                        final session = _history[index];
-                        final date = DateTime.parse(session['date']);
-                        
-                        return Card(
-                          margin: const EdgeInsets.only(bottom: 12),
-                          color: Colors.grey[900],
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                          child: ListTile(
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(Icons.fitness_center, color: Theme.of(context).colorScheme.primary, size: 20),
-                            ),
-                            title: Text(
-                              session['session_name'],
-                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            subtitle: Text(
-                              DateFormat('dd/MM/yyyy HH:mm').format(date),
-                              style: TextStyle(color: Colors.grey[500], fontSize: 12),
-                            ),
-                            trailing: const Icon(Icons.chevron_right, color: Colors.grey),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => HistoryDetailScreen(sessionId: session['id']),
-                                ),
-                              );
-                            },
-                          ),
-                        );
+                  : RefreshIndicator(
+                      color: Theme.of(context).colorScheme.primary,
+                      onRefresh: () async {
+                        setState(() => _isLoading = true);
+                        await _fetchHistory();
                       },
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(20),
+                        itemCount: _history.length,
+                        itemBuilder: (context, index) {
+                          final session = _history[index];
+                          final date = DateTime.parse(session['date']);
+
+                          return GestureDetector(
+                            onTap: () => Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => HistoryDetailScreen(sessionId: session['id']),
+                              ),
+                            ),
+                            child: Container(
+                              margin: const EdgeInsets.only(bottom: 12),
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF1E1E1E),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(color: Colors.white.withOpacity(0.05)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 48,
+                                    height: 48,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.12),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Icon(
+                                      Icons.fitness_center,
+                                      color: Theme.of(context).colorScheme.primary,
+                                      size: 22,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          session['session_name'],
+                                          style: const TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 15,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          DateFormat("dd 'de' MMMM 'às' HH:mm", 'pt_BR').format(date),
+                                          style: TextStyle(color: Colors.grey[500], fontSize: 12),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
                     ),
     );
   }
